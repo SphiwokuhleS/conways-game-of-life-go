@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"go-conways-game-of-life/api"
+	"log"
 	"net/http"
-	"strings"
 )
 
 func main() {
@@ -15,15 +15,15 @@ func main() {
 	r.HandleFunc("/world", api.GetWorldHandler).Methods("POST")
 	r.HandleFunc("/worlds", api.GetAllWorldsHandler).Methods("GET")
 	r.HandleFunc("/world/{name}", api.GetWorldEpoch).Methods("GET")
+	r.HandleFunc("/create", api.CreateWorldHandler).Methods("POST")
+	r.HandleFunc("/generation", api.NextGeneration).Methods("POST")
+	r.HandleFunc("/world/{name}", api.DeleteWorldHandler).Methods("DELETE")
 
-	fmt.Println("Running game of life server")
-	http.ListenAndServe(":8080", r)
+	fmt.Println("Running game of life server..")
+	err := http.ListenAndServe(":8080", r)
 
-}
-
-/**
-        Convert 2D array to string so it can be stored in the database as json
-**/
-func toString(grid [10][10]int) string {
-	return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(grid)), " "), "")
+	if err != nil {
+		log.Println("Couldn't start server", err)
+		return
+	}
 }

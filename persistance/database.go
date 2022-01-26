@@ -12,7 +12,7 @@ func CreateWorld(world World) World {
 	if err != nil {
 		log.Println("Could not connect to database", err)
 	}
-	db.Create(world)
+	db.Create(&world)
 	return world
 }
 
@@ -82,13 +82,15 @@ func FindWorldById() {
 	//Delete World
 }
 
-func DeleteWorld(name string) {
+func DeleteWorld(world World) bool {
 	db, err := connect()
 	if err != nil {
 		log.Println("Could not connect to database", err)
+		return false
 	}
 
-	db.Where("name = ?", name).Delete(World{})
+	db.Delete(&world)
+	return true
 }
 
 func connect() (*gorm.DB, error) {

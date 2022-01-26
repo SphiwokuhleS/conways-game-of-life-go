@@ -53,3 +53,8 @@ func MultipleGenerations(numberOfGenerations int, grid [21][21]int) [21][21]int 
 func ToString(grid [21][21]int) string {
 	return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(grid)), " "), "")
 }
+
+func ToJsonArray(arrayString string) string {
+	stripedGrid := strings.Replace(arrayString, " ", ",", -1)
+	return stripedGrid
+}

@@ -30,8 +30,8 @@ type ResponseAllWorlds struct {
 }
 
 type RequestGenerationHandler struct {
-	Name string      `json:"Name"`
-	Grid [21][21]int `json:"Grid"`
+	Name string `json:"Name"`
+	Grid string `json:"Grid"`
 }
 
 type CreateWorldRequest struct {
@@ -52,7 +52,6 @@ func PingHandler(w http.ResponseWriter, r *http.Request) {
 
 func CreateWorldHandler(w http.ResponseWriter, r *http.Request) {
 	var createWorldRequest CreateWorldRequest
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
@@ -62,12 +61,11 @@ func CreateWorldHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Could not read create world request body", err)
 	}
 
-	reqData := json.Unmarshal(body, &CreateWorldRequest{})
+	reqData := json.Unmarshal(body, &createWorldRequest)
 
 	if reqData != nil {
 		log.Println("Could not marshal request body", err)
 	}
-
 	world := persistance.CreateWorld(persistance.World{Name: createWorldRequest.Name, Grid: createWorldRequest.Grid, Epoch: 1})
 
 	response := &ResponseWorld{
@@ -88,6 +86,7 @@ func CreateWorldHandler(w http.ResponseWriter, r *http.Request) {
 func NextGeneration(w http.ResponseWriter, r *http.Request) {
 	var generation RequestGenerationHandler
 	var world persistance.World
+	var grid [21][21]int
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -103,15 +102,22 @@ func NextGeneration(w http.ResponseWriter, r *http.Request) {
 		log.Println("Could not decode next generation json", reqData)
 	}
 
-	newGrid := domain.GenerateNextGeneration(generation.Grid)
+	err = json.Unmarshal([]byte(generation.Grid), &grid)
+	if err != nil {
+		log.Println("Could not unmarshal array", err)
+	}
+
+	newGrid := domain.GenerateNextGeneration(grid)
+	newGridJson := domain.ToJsonArray(domain.ToString(newGrid))
 	persistance.UpdateEpochWorldEpoch(generation.Name)
-	persistance.UpdateGridWorldGrid(generation.Name, domain.ToString(newGrid))
+	persistance.UpdateGridWorldGrid(generation.Name, newGridJson)
 
 	world = persistance.GetWorldByName(generation.Name)
+	gridResponse := domain.ToJsonArray(world.Grid)
 	var response = &ResponseWorld{
 		Name:  world.Name,
 		Epoch: world.Epoch,
-		Grid:  world.Grid,
+		Grid:  gridResponse,
 	}
 
 	jsonResponse, err := json.Marshal(response)
@@ -196,6 +202,23 @@ func GetWorldHandler(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, string(jsonWorld))
 }
 
-func DeleteWorldHandler() {
-	//
+func DeleteWorldHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	vars := mux.Vars(r)
+	name, err := vars["name"]
+
+	if !err {
+		log.Println(err)
+	}
+
+	world := persistance.GetWorldByName(name)
+	deleted := persistance.DeleteWorld(world)
+
+	if deleted {
+		io.WriteString(w, `{"deleted": true, "message": "World deleted"}`)
+	} else {
+		io.WriteString(w, `{"deleted": false, "message":"World does not exist"}`)
+	}
 }

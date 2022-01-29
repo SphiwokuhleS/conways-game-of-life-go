@@ -18,8 +18,11 @@ jobs:
       with:
         go-version: 1.17
 
+    - name: Install sqlite3 and make
+      run: apt install sqlite3 make -y
+
     - name: Build
       run: go build -v ./...
 
     - name: Test
-      run: cd api; go test -v
+      run: make run_api_tests

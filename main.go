@@ -17,6 +17,7 @@ func main() {
 	r.HandleFunc("/world/{name}", api.GetWorldEpoch).Methods("GET")
 	r.HandleFunc("/create", api.CreateWorldHandler).Methods("POST")
 	r.HandleFunc("/generation", api.NextGeneration).Methods("POST")
+	r.HandleFunc("/generations", api.MultipleGenerations).Methods("POST")
 	r.HandleFunc("/world/{name}", api.DeleteWorldHandler).Methods("DELETE")
 
 	fmt.Println("Running game of life server..")

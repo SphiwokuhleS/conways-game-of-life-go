@@ -42,7 +42,6 @@ func GenerateNextGeneration(grid [21][21]int) [21][21]int {
 }
 
 func MultipleGenerations(numberOfGenerations int, grid [21][21]int) [21][21]int {
-
 	var newGrid = [21][21]int{}
 	for i := 0; i <= numberOfGenerations; i++ {
 		newGrid = GenerateNextGeneration(grid)

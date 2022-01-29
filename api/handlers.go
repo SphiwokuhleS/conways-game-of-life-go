@@ -12,9 +12,9 @@ import (
 )
 
 type ResponseWorld struct {
-	Name  string `json:"Name"`
-	Epoch int    `json:"Epoch"`
-	Grid  string `json:"Grid"`
+	Name  string `json:"name"`
+	Epoch int    `json:"epoch"`
+	Grid  string `json:"grid"`
 }
 
 type WorldHandler struct {
@@ -22,7 +22,7 @@ type WorldHandler struct {
 }
 
 type ResponseEpoch struct {
-	Epoch int `json:"Epoch"`
+	Epoch int `json:"epoch"`
 }
 
 type ResponseAllWorlds struct {
@@ -30,14 +30,20 @@ type ResponseAllWorlds struct {
 }
 
 type RequestGenerationHandler struct {
-	Name string `json:"Name"`
-	Grid string `json:"Grid"`
+	Name string `json:"name"`
+	Grid string `json:"grid"`
 }
 
 type CreateWorldRequest struct {
-	Name  string `json:"Name"`
-	Epoch int    `json:"Epoch"`
-	Grid  string `json:"Grid"`
+	Name  string `json:"name"`
+	Epoch int    `json:"epoch"`
+	Grid  string `json:"grid"`
+}
+
+type MultiGenerationRequest struct {
+	Name        string `json:"name"`
+	Grid        string `json:"grid"`
+	Generations int    `json:"generations"`
 }
 
 func PingHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,18 +59,21 @@ func PingHandler(w http.ResponseWriter, r *http.Request) {
 func CreateWorldHandler(w http.ResponseWriter, r *http.Request) {
 	var createWorldRequest CreateWorldRequest
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 
 	body, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
 		log.Println("Could not read create world request body", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	reqData := json.Unmarshal(body, &createWorldRequest)
 
 	if reqData != nil {
 		log.Println("Could not marshal request body", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	world := persistance.CreateWorld(persistance.World{Name: createWorldRequest.Name, Grid: createWorldRequest.Grid, Epoch: 1})
 
@@ -78,9 +87,12 @@ func CreateWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println("Could not marshal world created json object", err)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, string(jsonResponse))
+	return
 }
 
 func NextGeneration(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +120,52 @@ func NextGeneration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newGrid := domain.GenerateNextGeneration(grid)
+	newGridJson := domain.ToJsonArray(domain.ToString(newGrid))
+	persistance.UpdateEpochWorldEpoch(generation.Name)
+	persistance.UpdateGridWorldGrid(generation.Name, newGridJson)
+
+	world = persistance.GetWorldByName(generation.Name)
+	gridResponse := domain.ToJsonArray(world.Grid)
+	var response = &ResponseWorld{
+		Name:  world.Name,
+		Epoch: world.Epoch,
+		Grid:  gridResponse,
+	}
+
+	jsonResponse, err := json.Marshal(response)
+
+	if err != nil {
+		log.Println("Could not marshal world response", err)
+	}
+
+	io.WriteString(w, string(jsonResponse))
+}
+
+func MultipleGenerations(w http.ResponseWriter, r *http.Request) {
+	var generation MultiGenerationRequest
+	var world persistance.World
+	var grid [21][21]int
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	body, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		log.Println("Could not read next generation json", err)
+	}
+	reqData := json.Unmarshal(body, &generation)
+
+	if reqData != nil {
+		log.Println("Could not decode next generation json", reqData)
+	}
+
+	err = json.Unmarshal([]byte(generation.Grid), &grid)
+	if err != nil {
+		log.Println("Could not unmarshal array", err)
+	}
+
+	newGrid := domain.MultipleGenerations(generation.Generations, grid)
 	newGridJson := domain.ToJsonArray(domain.ToString(newGrid))
 	persistance.UpdateEpochWorldEpoch(generation.Name)
 	persistance.UpdateGridWorldGrid(generation.Name, newGridJson)

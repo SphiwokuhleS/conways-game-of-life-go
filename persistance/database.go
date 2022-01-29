@@ -78,10 +78,6 @@ func UpdateGridWorldGrid(worldName string, newGrid string) {
 
 }
 
-func FindWorldById() {
-	//Delete World
-}
-
 func DeleteWorld(world World) bool {
 	db, err := connect()
 	if err != nil {
